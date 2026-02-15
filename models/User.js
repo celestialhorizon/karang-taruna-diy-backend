@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import Progress from './Progress.js';
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -93,6 +94,17 @@ userSchema.pre('save', async function(next) {
 userSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
+
+// Pre-delete middleware to clean up progress records
+userSchema.pre('deleteOne', { document: true, query: false }, async function() {
+  await Progress.deleteMany({ user: this._id });
+});
+
+userSchema.pre('deleteMany', async function() {
+  const users = await this.model.find(this.getFilter());
+  const userIds = users.map(u => u._id);
+  await Progress.deleteMany({ user: { $in: userIds } });
+});
 
 const User = mongoose.model('User', userSchema);
 

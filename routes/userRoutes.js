@@ -1,5 +1,6 @@
 import express from 'express';
 import User from '../models/User.js';
+import Progress from '../models/Progress.js';
 import { protect, admin } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -142,8 +143,14 @@ router.delete('/:id', protect, admin, async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'Pengguna tidak ditemukan' });
     }
+
+    // Delete all progress records for this user
+    await Progress.deleteMany({ user: req.params.id });
+
+    // Delete the user
     await User.deleteOne({ _id: req.params.id });
-    res.json({ message: 'Pengguna berhasil dihapus' });
+    
+    res.json({ message: 'Pengguna dan semua progress terkait berhasil dihapus' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Terjadi kesalahan server' });

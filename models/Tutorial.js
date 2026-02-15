@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import Progress from './Progress.js';
 
 const tutorialSchema = new mongoose.Schema({
   title: {
@@ -92,6 +93,17 @@ const tutorialSchema = new mongoose.Schema({
   }]
 }, {
   timestamps: true
+});
+
+// Pre-delete middleware to clean up progress records
+tutorialSchema.pre('deleteOne', { document: true, query: false }, async function() {
+  await Progress.deleteMany({ tutorial: this._id });
+});
+
+tutorialSchema.pre('deleteMany', async function() {
+  const tutorials = await this.model.find(this.getFilter());
+  const tutorialIds = tutorials.map(t => t._id);
+  await Progress.deleteMany({ tutorial: { $in: tutorialIds } });
 });
 
 const Tutorial = mongoose.model('Tutorial', tutorialSchema);

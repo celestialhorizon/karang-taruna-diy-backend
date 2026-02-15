@@ -139,7 +139,11 @@ router.delete('/:id', protect, admin, async (req, res) => {
     if (!tutorial) {
       return res.status(404).json({ message: 'Tutorial tidak ditemukan' });
     }
-    res.json({ message: 'Tutorial berhasil dihapus' });
+
+    // Delete all progress records for this tutorial
+    await Progress.deleteMany({ tutorial: req.params.id });
+
+    res.json({ message: 'Tutorial dan semua progress terkait berhasil dihapus' });
   } catch (error) {
     console.error(error);
     
@@ -170,6 +174,19 @@ router.post('/:id/progress', protect, async (req, res) => {
     const userId = req.user._id;
     const tutorialId = req.params.id;
 
+    // Validate required fields
+    if (!userId) {
+      return res.status(401).json({ message: 'User ID tidak ditemukan' });
+    }
+
+    if (!tutorialId) {
+      return res.status(400).json({ message: 'Tutorial ID diperlukan' });
+    }
+
+    if (typeof stepNumber !== 'number' || stepNumber < 1) {
+      return res.status(400).json({ message: 'Nomor langkah tidak valid' });
+    }
+
     let progress = await Progress.findOne({ user: userId, tutorial: tutorialId });
 
     if (!progress) {
@@ -188,7 +205,7 @@ router.post('/:id/progress', protect, async (req, res) => {
       }
       
       const tutorial = await Tutorial.findById(tutorialId);
-      if (progress.completedSteps.length === tutorial.steps.length) {
+      if (tutorial && progress.completedSteps.length === tutorial.steps.length) {
         progress.isCompleted = true;
         progress.completedAt = new Date();
       } else {
@@ -201,7 +218,7 @@ router.post('/:id/progress', protect, async (req, res) => {
 
     res.json(progress);
   } catch (error) {
-    console.error(error);
+    console.error('Progress update error:', error);
     
     // Handle Mongoose validation errors
     if (error.name === 'ValidationError') {
@@ -227,12 +244,17 @@ router.post('/:id/progress', protect, async (req, res) => {
 router.get('/user/progress', protect, async (req, res) => {
   try {
     const userId = req.user._id;
+    
+    if (!userId) {
+      return res.status(401).json({ message: 'User ID tidak ditemukan' });
+    }
+    
     const progress = await Progress.find({ user: userId })
       .populate('tutorial', 'title category difficulty duration imageUrl steps');
     
     res.json(progress);
   } catch (error) {
-    console.error(error);
+    console.error('Get user progress error:', error);
     
     // Handle Mongoose validation errors
     if (error.name === 'ValidationError') {
@@ -260,12 +282,20 @@ router.get('/:id/progress', protect, async (req, res) => {
     const userId = req.user._id;
     const tutorialId = req.params.id;
 
+    if (!userId) {
+      return res.status(401).json({ message: 'User ID tidak ditemukan' });
+    }
+
+    if (!tutorialId) {
+      return res.status(400).json({ message: 'Tutorial ID diperlukan' });
+    }
+
     const progress = await Progress.findOne({ user: userId, tutorial: tutorialId })
       .populate('tutorial', 'title steps');
     
     res.json(progress || { completedSteps: [], isCompleted: false, timeSpent: 0 });
   } catch (error) {
-    console.error(error);
+    console.error('Get tutorial progress error:', error);
     
     // Handle Mongoose validation errors
     if (error.name === 'ValidationError') {
@@ -295,6 +325,18 @@ router.post('/:id/time', protect, async (req, res) => {
     const tutorialId = req.params.id;
     const { timeSpent } = req.body;
 
+    if (!userId) {
+      return res.status(401).json({ message: 'User ID tidak ditemukan' });
+    }
+
+    if (!tutorialId) {
+      return res.status(400).json({ message: 'Tutorial ID diperlukan' });
+    }
+
+    if (typeof timeSpent !== 'number' || timeSpent < 0) {
+      return res.status(400).json({ message: 'Waktu tidak valid' });
+    }
+
     const progress = await Progress.findOne({ user: userId, tutorial: tutorialId });
     
     if (progress) {
@@ -304,7 +346,7 @@ router.post('/:id/time', protect, async (req, res) => {
     
     res.json({ success: true, timeSpent: progress?.timeSpent || 0 });
   } catch (error) {
-    console.error(error);
+    console.error('Time tracking error:', error);
     
     // Handle Mongoose validation errors
     if (error.name === 'ValidationError') {
