@@ -10,8 +10,14 @@ const seedUsers = async () => {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('Connected to MongoDB');
 
-    await User.deleteMany({});
-    console.log('Cleared existing users');
+    // Check if users already exist
+    const existingUsers = await User.find({});
+    if (existingUsers.length > 0) {
+      console.log('Users already exist. Skipping seeding.');
+      await mongoose.disconnect();
+      console.log('Disconnected from MongoDB');
+      process.exit(0);
+    }
 
     const adminPassword = await bcrypt.hash('admin123', 10);
     const userPassword = await bcrypt.hash('user123', 10);
@@ -19,14 +25,14 @@ const seedUsers = async () => {
     const users = [
       {
         username: 'admin',
-        email: 'admin@karangtaruna.com',
+        email: 'admin@email.com',
         password: adminPassword,
         role: 'admin',
         isActive: true,
       },
       {
         username: 'user',
-        email: 'user@karangtaruna.com',
+        email: 'user@email.com',
         password: userPassword,
         role: 'user',
         isActive: true,
@@ -35,8 +41,8 @@ const seedUsers = async () => {
 
     await User.insertMany(users);
     console.log('Users seeded successfully:');
-    console.log('- Admin: admin@karangtaruna.com / admin123');
-    console.log('- User: user@karangtaruna.com / user123');
+    console.log('- Admin: admin@email.com / admin123');
+    console.log('- User: user@email.com / user123');
 
     await mongoose.disconnect();
     console.log('Disconnected from MongoDB');

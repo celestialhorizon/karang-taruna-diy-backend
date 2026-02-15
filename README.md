@@ -49,12 +49,12 @@ npm start
 Setelah menjalankan seed, akan dibuat 2 user:
 
 1. **Admin**
-   - Email: admin@karangtaruna.com
+   - Email: admin@email.com
    - Password: admin123
    - Role: admin
 
 2. **User Biasa**
-   - Email: user@karangtaruna.com
+   - Email: user@email.com
    - Password: user123
    - Role: user
 
